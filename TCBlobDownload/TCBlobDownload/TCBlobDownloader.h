@@ -74,6 +74,8 @@ typedef NS_ENUM(NSUInteger, TCBlobDownloadState) {
  Each `TCBlobDownloader` instance will run in a background thread and will download files via an `NSURLConnection`. Each `TCBlobDownloader` can depend (or not) of a `TCBlobDownloaderDelegate` or use blocks to notify your UI from its status.
  
  @see TCBlobDownloaderDelegate protocol
+
+ @中文：继承于NSOperation
  
  @since 1.0
  */
@@ -88,7 +90,7 @@ typedef NS_ENUM(NSUInteger, TCBlobDownloadState) {
 
 /**
  The directory where the file is being downloaded.
-
+@中文：文件夹路径
  @since 1.0
  */
 @property (nonatomic, copy, readonly) NSString *pathToDownloadDirectory;
@@ -97,7 +99,7 @@ typedef NS_ENUM(NSUInteger, TCBlobDownloadState) {
  The path to the downloaded file, including the file name.
  
  @warning You should not set this property directly as the file name is managed by the library.
- 
+ @中文：文件路径
  @since 1.0
  */
 @property (nonatomic, copy, readonly, getter = pathToFile) NSString *pathToFile;
@@ -130,14 +132,14 @@ typedef NS_ENUM(NSUInteger, TCBlobDownloadState) {
  @see TCBlobDownloaderDelegate protocol
  
  @warning It is not recommended to set this property directly, as it is retrieved from the download URL and will allow you to resume a download from where it stopped.
- 
+ @中文：文件名
  @since 1.0
  */
 @property (nonatomic, copy, getter = fileName) NSString *fileName;
 
 /**
  The current speed of the download in bits/sec. This property updates itself regularly so you can retrieve it on a regular interval to update your UI.
- 
+ @中文：速率
  @since 1.5.0
  */
 @property (nonatomic, assign, readonly) NSInteger speedRate;
@@ -146,7 +148,7 @@ typedef NS_ENUM(NSUInteger, TCBlobDownloadState) {
  The estimated number of seconds before the download completes.
  
  `-1` if the remaining time has not been calculated yet.
- 
+ @中文：剩余时间
  @since 1.5.0
  */
 @property (nonatomic, assign, readonly, getter = remainingTime) NSInteger remainingTime;

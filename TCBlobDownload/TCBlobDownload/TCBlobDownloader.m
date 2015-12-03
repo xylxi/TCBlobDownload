@@ -74,6 +74,12 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
         self.delegate = delegateOrNil;
         self.pathToDownloadDirectory = pathToDL;
         self.state = TCBlobDownloadStateReady;
+        /**
+         *   NSURLRequestUseProtocolCachePolicy
+         *   默认的缓存策略， 如果缓存不存在，直接从服务端获取。如果缓存存在，会根据response中的
+         *   Cache-Control字段判断下一步操作，如: Cache-Control字段为must-revalidata, 
+         *   则询问服务端该数据是否有更新，无更新的话直接返回给用户缓存数据，若已更新，则请求服务端.
+         */
         self.fileRequest = [NSMutableURLRequest requestWithURL:self.downloadURL
                                                    cachePolicy:NSURLRequestUseProtocolCachePolicy
                                                timeoutInterval:kDefaultRequestTimeout];
@@ -104,20 +110,21 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
 
 - (void)start
 {
-    // If we can't handle the request, better cancelling the operation right now
+    // 如果不能处理改请求，则立即停止操作
     if (![NSURLConnection canHandleRequest:self.fileRequest]) {
         NSError *error = [NSError errorWithDomain:TCBlobDownloadErrorDomain
                                              code:TCBlobDownloadErrorInvalidURL
                                          userInfo:@{ NSLocalizedDescriptionKey:
                                         [NSString stringWithFormat:@"Invalid URL provided: %@", self.fileRequest.URL] }];
-
+        // 处理kVC
         [self notifyFromCompletionWithError:error pathToFile:nil];
         return;
     }
-
+    // 拿到文件句柄
     NSFileManager *fm = [NSFileManager defaultManager];
 
     // Create download directory
+    // 生产下载路径
     NSError *createDirError = nil;
     if (![fm createDirectoryAtPath:self.pathToDownloadDirectory
        withIntermediateDirectories:YES
@@ -126,22 +133,23 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
         [self notifyFromCompletionWithError:createDirError pathToFile:nil];
         return;
     }
-    
-    // Test if file already exists (partly downloaded) to set HTTP `bytes` header or not
+
+    // 如果不存在文件，则创建文件
     if (![fm fileExistsAtPath:self.pathToFile]) {
         [fm createFileAtPath:self.pathToFile
                     contents:nil
                   attributes:nil];
-    }
-    else {
+    }else {
+        // 存在则获取文件大小，配置请求的Range
         uint64_t fileSize = [[fm attributesOfItemAtPath:self.pathToFile error:nil] fileSize];
         NSString *range = [NSString stringWithFormat:@"bytes=%lld-", fileSize];
         [self.fileRequest setValue:range forHTTPHeaderField:@"Range"];
-        // Allow progress to reflect what's already downloaded
+        // 改变已经收到的数据大小
         self.receivedDataLength += fileSize;
     }
 
     // Initialization of everything we'll need to download the file
+    
     self.file = [NSFileHandle fileHandleForWritingAtPath:self.pathToFile];
     self.receivedDataBuffer = [[NSMutableData alloc] init];
     self.samplesOfDownloadedBytes = [[NSMutableArray alloc] init];
@@ -162,7 +170,7 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
                                    forMode:NSDefaultRunLoopMode];
         [self.connection start];
 
-        // Start the speed timer to schedule speed download on a periodic basis
+        // 每秒计算一次下载速度
         self.speedTimer = [NSTimer scheduledTimerWithTimeInterval:1.0
                                                            target:self
                                                          selector:@selector(updateTransferRate)
@@ -185,7 +193,9 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
 
 - (BOOL)isFinished
 {
-    return self.state == TCBlobDownloadStateCancelled || self.state == TCBlobDownloadStateDone || self.state == TCBlobDownloadStateFailed;
+    return self.state == TCBlobDownloadStateCancelled ||
+           self.state == TCBlobDownloadStateDone ||
+           self.state == TCBlobDownloadStateFailed;
 }
 
 
@@ -326,6 +336,12 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
     [self didChangeValueForKey:@"isCancelled"];
 }
 
+/**
+ *  用于处理下载完成、下载失败、出现异常结束任务的统一处理
+ *
+ *  @param error      <#error description#>
+ *  @param pathToFile <#pathToFile description#>
+ */
 - (void)notifyFromCompletionWithError:(NSError *)error pathToFile:(NSString *)pathToFile
 {
     BOOL success = error == nil;
@@ -380,6 +396,7 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
     return YES;
 }
 
+/** 剩余空间大小*/
 + (NSNumber *)freeDiskSpace
 {
     NSDictionary *fattributes = [[NSFileManager defaultManager] attributesOfFileSystemForPath:NSHomeDirectory() error:nil];
@@ -389,12 +406,12 @@ NSString * const TCBlobDownloadErrorHTTPStatusKey = @"TCBlobDownloadErrorHTTPSta
 
 #pragma mark - Custom Getters
 
-
+/** 文件名字－－－>URL的最后*/
 - (NSString *)fileName
 {
     return _fileName ? _fileName : [[NSURL URLWithString:[self.downloadURL absoluteString]] lastPathComponent];
 }
-
+/** 文件路径＝文件夹＋文件名*/
 - (NSString *)pathToFile
 {
     return [self.pathToDownloadDirectory stringByAppendingPathComponent:self.fileName];

@@ -27,21 +27,21 @@
  The default value is `/tmp`.
  
  @warning Please be careful of the iOS Data Storage Guidelines when setting the download path.
- 
+ @中文：默认的下载存储的文件夹路基
  @since 1.1
  */
 @property (nonatomic, copy) NSString *defaultDownloadPath;
 
 /**
  The number of downloads currently in the queue
- 
+ @中文：需要下载的文件个数
  @since 1.0
  */
 @property (nonatomic, assign) NSUInteger downloadCount;
 
 /**
  The number of downloads currently being executed by the queue (currently downloading data).
- 
+ @中文：当前下载数量
  @since 1.6.0
  */
 @property (nonatomic, assign) NSUInteger currentDownloadsCount;
